@@ -542,6 +542,27 @@ class fieldsattachHelper
             return  $sitepath;
         }
 
+	/**
+	 * Query caching mechanism
+	 *
+	 * @param $sql
+	 * @param $function
+	 *
+	 * @return mixed
+	 */
+	private static function cacheQuery($sql, $function)
+	{
+		static $queries;
+		if (!$queries or !array_key_exists($sql, $queries))
+		{
+			$db = JFactory::getDBO();
+			$db->setQuery($sql);
+			$queries[$sql] = $db->$function();
+		}
+
+		return $queries[$sql];
+	}
+
         /**
     	* Arrauy    get fields for a id
     	*
@@ -551,11 +572,10 @@ class fieldsattachHelper
         static public function  getfieldsForAll($id)
         {
 
-            $db	=  JFactory::getDBO();
             $query = 'SELECT a.catid, a.language FROM #__content as a WHERE a.id='. $id  ;
 
-            $db->setQuery( $query );
-            $elid = $db->loadObject();
+	        $elid = self::cacheQuery($query, 'loadObject');
+
             $empty = array();
             $result = array();
             if(!empty($elid)){
@@ -571,8 +591,7 @@ class fieldsattachHelper
 
                 $query .='ORDER BY a.ordering, a.title, b.ordering';
                  
-                $db->setQuery( $query );
-                $result = $db->loadObjectList();
+                $result = self::cacheQuery($query, 'loadObject');
             }
             if($result) return $result;
             else return $empty  ;
@@ -847,11 +866,9 @@ class fieldsattachHelper
              if(!empty($catid)){
                 if(!empty($idscats)) $idscats .=  ",";
                 $idscats .= $catid ;
-                $db	=  JFactory::getDBO();
                 $query = 'SELECT parent_id FROM #__categories as a WHERE a.id='.$catid   ;
 				//echo "<br>SQL:: ".$query."<br>";
-                $db->setQuery( $query );
-                $parent_id = $db->loadResult();
+                $parent_id = self::cacheQuery($query, 'loadResult');
                 //echo "PARENT:: ".$parent_id."<br>";
                 if(!empty($parent_id)) {
                 	//echo "<br>".$idscats;
@@ -875,11 +892,9 @@ class fieldsattachHelper
         static public function getfieldsForArticlesid($id, $fields = null)
         {
 
-            $db	=  JFactory::getDBO();
             $query = 'SELECT a.catid, a.language FROM #__content as a WHERE a.id='. $id  ;
 
-            $db->setQuery( $query );
-            $elid = $db->loadObject();
+            $elid = self::cacheQuery($query, 'loadObject');
             $empty = array();
             if(!empty($elid)){
             $idioma = $elid->language;
@@ -896,10 +911,9 @@ class fieldsattachHelper
 
              $query .='ORDER BY a.ordering, a.title, b.ordering';
             //echo $query;
-            $db->setQuery( $query );
 
             //(a.articlesid LIKE "%,'. $id .',%" )  AND
-            $results = $db->loadObjectList();
+            $results = self::cacheQuery($query, 'loadObjectList');
 
             //echo "<br>count: " . count($results);
             $cont = 0;
